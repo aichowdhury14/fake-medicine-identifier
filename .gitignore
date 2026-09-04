@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+data/indications_cache/
+data/*.jpg
+data/*.jpeg
+data/*.png
+data/*_result*.json
+data/*_log*.txt
+.env
