@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Med Check">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,680&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,680&family=Public+Sans:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #16261f;
@@ -84,7 +84,7 @@
       radial-gradient(1200px 480px at 15% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
       var(--paper);
     color: var(--ink);
-    font-family: "Public Sans", -apple-system, "Segoe UI", "Noto Sans Bengali", sans-serif;
+    font-family: "Public Sans", "Noto Sans Bengali", -apple-system, "Segoe UI", sans-serif;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
@@ -113,7 +113,7 @@
   }
   .mark svg { width: 22px; height: 22px; }
   header.masthead h1 {
-    font-family: "Fraunces", Georgia, serif;
+    font-family: "Fraunces", "Noto Sans Bengali", Georgia, serif;
     font-optical-sizing: auto;
     font-weight: 560;
     font-size: 1.5rem;
@@ -126,6 +126,31 @@
     font-size: 0.85rem;
     margin: 3px 0 0;
   }
+  .masthead-text { flex: 1; min-width: 0; }
+  .lang-toggle {
+    flex: none;
+    display: flex;
+    background: var(--paper-sunken);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .lang-toggle button {
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .lang-toggle button.active { background: var(--accent); color: #fff; }
+  .lang-toggle button:not(.active):hover { color: var(--ink); }
+  .lang-toggle button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
   /* ---------- Cards ---------- */
   .card {
@@ -299,7 +324,7 @@
   .status-expired .verdict-stamp { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-line); }
 
   .verdict-card h2 {
-    font-family: "Fraunces", Georgia, serif;
+    font-family: "Fraunces", "Noto Sans Bengali", Georgia, serif;
     font-weight: 560;
     font-size: 1.28rem;
     line-height: 1.25;
@@ -422,7 +447,7 @@
     margin: 0 0 4px;
   }
   .credit-name {
-    font-family: "Fraunces", Georgia, serif;
+    font-family: "Fraunces", "Noto Sans Bengali", Georgia, serif;
     font-weight: 560;
     font-size: 1.05rem;
     color: var(--ink);
@@ -444,21 +469,25 @@
         <path d="M12 8v8M8 12h8"/>
       </svg>
     </div>
-    <div>
-      <h1>Medicine Check</h1>
-      <p>Cross-check packaging against Bangladesh's public drug directory</p>
+    <div class="masthead-text">
+      <h1 data-i18n="appTitle">Medicine Check</h1>
+      <p data-i18n="appSubtitle">Cross-check packaging against Bangladesh's public drug directory</p>
+    </div>
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button type="button" id="langEn" data-lang="en">EN</button>
+      <button type="button" id="langBn" data-lang="bn">বাং</button>
     </div>
   </header>
 
   <div class="card">
-    <p class="eyebrow">Step 1 — Photograph the packaging</p>
+    <p class="eyebrow" data-i18n="step1">Step 1 — Photograph the packaging</p>
     <label class="upload-zone" id="uploadZone">
       <span class="upload-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M16 8l-4-4-4 4M12 4v12"/></svg>
       </span>
-      <strong>Tap to take or upload a photo</strong>
-      <span class="hint">Show the brand name, strength, manufacturer, and expiry date clearly</span>
-      <input type="file" id="fileInput" accept="image/*" capture="environment" aria-label="Upload a photo of the medicine packaging">
+      <strong data-i18n="uploadTitle">Tap to take or upload a photo</strong>
+      <span class="hint" data-i18n="uploadHint">Show the brand name, strength, manufacturer, and expiry date clearly</span>
+      <input type="file" id="fileInput" accept="image/*" capture="environment" data-i18n-aria="uploadAria" aria-label="Upload a photo of the medicine packaging">
     </label>
 
     <div class="preview-wrap" id="previewWrap">
@@ -467,30 +496,140 @@
         <div class="fname" id="fname"></div>
         <div class="fsize" id="fsize"></div>
       </div>
-      <button type="button" class="preview-clear" id="clearBtn" aria-label="Remove selected photo">✕</button>
+      <button type="button" class="preview-clear" id="clearBtn" data-i18n-aria="removePhoto" aria-label="Remove selected photo">✕</button>
     </div>
 
     <button class="primary" id="checkBtn" disabled>
       <span class="spinner" aria-hidden="true"></span>
-      <span class="btn-label">Check this medicine</span>
+      <span class="btn-label" data-i18n="checkBtn">Check this medicine</span>
     </button>
-    <p id="status"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; Reading packaging and checking directory…</p>
+    <p id="status"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; <span data-i18n="statusChecking">Reading packaging and checking directory…</span></p>
   </div>
 
   <div id="result"></div>
 
   <div class="disclaimer">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L14.7 3.86a2 2 0 00-3.4 0z"/></svg>
-    <span>This tool cross-checks packaging photos against MedEx's public medicine directory for Bangladesh. It is <strong>not</strong> an official DGDA registration check and cannot guarantee authenticity. Always buy from licensed pharmacies and consult a pharmacist or doctor when in doubt.</span>
+    <span data-i18n-html="disclaimerText">This tool cross-checks packaging photos against MedEx's public medicine directory for Bangladesh. It is <strong>not</strong> an official DGDA registration check and cannot guarantee authenticity. Always buy from licensed pharmacies and consult a pharmacist or doctor when in doubt.</span>
   </div>
 
   <footer class="credit">
-    <p class="credit-eyebrow">An initiative by</p>
+    <p class="credit-eyebrow" data-i18n="creditEyebrow">An initiative by</p>
     <p class="credit-name">Atiqul Islam Chowdhury</p>
   </footer>
 </div>
 
 <script>
+const STRINGS = {
+  en: {
+    appTitle: 'Medicine Check',
+    appSubtitle: "Cross-check packaging against Bangladesh's public drug directory",
+    step1: 'Step 1 — Photograph the packaging',
+    uploadTitle: 'Tap to take or upload a photo',
+    uploadHint: 'Show the brand name, strength, manufacturer, and expiry date clearly',
+    uploadAria: 'Upload a photo of the medicine packaging',
+    removePhoto: 'Remove selected photo',
+    checkBtn: 'Check this medicine',
+    statusChecking: 'Reading packaging and checking directory…',
+    disclaimerText: "This tool cross-checks packaging photos against MedEx's public medicine directory for Bangladesh. It is <strong>not</strong> an official DGDA registration check and cannot guarantee authenticity. Always buy from licensed pharmacies and consult a pharmacist or doctor when in doubt.",
+    creditEyebrow: 'An initiative by',
+    errorTitle: 'Something went wrong',
+    genericLabel: 'Generic',
+    manufacturerLabel: 'Manufacturer',
+    whatIsThisFor: 'What is this medicine for?',
+    hideMedicalInfo: 'Hide medical info',
+    loading: 'Loading…',
+    whatWasRead: 'What was read from the photo',
+    stamps: {
+      found_in_directory: 'Found in directory',
+      name_found_manufacturer_mismatch: 'Manufacturer mismatch',
+      similar_name_only: 'Similar name only',
+      not_found_in_directory: 'Not found',
+      expired: 'Expired',
+      unreadable: 'Unreadable photo',
+      error: 'Error',
+    },
+    refSections: {
+      indications: 'Used for (Indications)',
+      contraindications: 'Not for (Contraindications)',
+      side_effects: 'Possible side effects',
+      pregnancy_lactation: 'Pregnancy & breastfeeding',
+    },
+  },
+  bn: {
+    appTitle: 'মেডিসিন চেক',
+    appSubtitle: 'বাংলাদেশের সরকারি ওষুধ তালিকার সাথে প্যাকেজিং যাচাই করুন',
+    step1: 'ধাপ ১ — প্যাকেজিংয়ের ছবি তুলুন',
+    uploadTitle: 'ছবি তুলতে বা আপলোড করতে ট্যাপ করুন',
+    uploadHint: 'ব্র্যান্ডের নাম, শক্তি, প্রস্তুতকারক এবং মেয়াদ উত্তীর্ণের তারিখ স্পষ্টভাবে দেখান',
+    uploadAria: 'ওষুধের প্যাকেজিংয়ের একটি ছবি আপলোড করুন',
+    removePhoto: 'নির্বাচিত ছবি সরান',
+    checkBtn: 'এই ওষুধটি যাচাই করুন',
+    statusChecking: 'প্যাকেজিং পড়া হচ্ছে এবং তালিকা যাচাই করা হচ্ছে…',
+    disclaimerText: 'এই টুলটি বাংলাদেশের জন্য MedEx-এর সরকারি ওষুধ তালিকার সাথে প্যাকেজিংয়ের ছবি মিলিয়ে দেখে। এটি <strong>সরকারি DGDA নিবন্ধন যাচাই নয়</strong> এবং সত্যতার নিশ্চয়তা দিতে পারে না। সবসময় লাইসেন্সপ্রাপ্ত ফার্মেসি থেকে কিনুন এবং সন্দেহ হলে ফার্মাসিস্ট বা ডাক্তারের পরামর্শ নিন।',
+    creditEyebrow: 'একটি উদ্যোগ —',
+    errorTitle: 'কিছু একটা সমস্যা হয়েছে',
+    genericLabel: 'জেনেরিক',
+    manufacturerLabel: 'প্রস্তুতকারক',
+    whatIsThisFor: 'এই ওষুধটি কিসের জন্য?',
+    hideMedicalInfo: 'তথ্য লুকান',
+    loading: 'লোড হচ্ছে…',
+    whatWasRead: 'ছবি থেকে যা পড়া হয়েছে',
+    stamps: {
+      found_in_directory: 'তালিকায় পাওয়া গেছে',
+      name_found_manufacturer_mismatch: 'প্রস্তুতকারক মিলছে না',
+      similar_name_only: 'কাছাকাছি নাম পাওয়া গেছে',
+      not_found_in_directory: 'পাওয়া যায়নি',
+      expired: 'মেয়াদ উত্তীর্ণ',
+      unreadable: 'ছবিটি পড়া যায়নি',
+      error: 'ত্রুটি',
+    },
+    refSections: {
+      indications: 'ব্যবহার (কী কাজে লাগে)',
+      contraindications: 'নিষেধ (কাদের জন্য নয়)',
+      side_effects: 'সম্ভাব্য পার্শ্বপ্রতিক্রিয়া',
+      pregnancy_lactation: 'গর্ভাবস্থা ও বুকের দুধ খাওয়ানো',
+    },
+  },
+};
+
+function detectDefaultLang() {
+  const saved = localStorage.getItem('lang');
+  if (saved === 'en' || saved === 'bn') return saved;
+  const browserLang = (navigator.language || '').toLowerCase();
+  return browserLang.startsWith('bn') ? 'bn' : 'en';
+}
+
+let currentLang = detectDefaultLang();
+
+function t(key) {
+  return STRINGS[currentLang][key] ?? STRINGS.en[key];
+}
+
+function applyLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  });
+
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langBn').classList.toggle('active', lang === 'bn');
+  document.getElementById('checkBtn').querySelector('.btn-label').textContent = t('checkBtn');
+}
+
+document.getElementById('langEn').addEventListener('click', () => applyLang('en'));
+document.getElementById('langBn').addEventListener('click', () => applyLang('bn'));
+applyLang(currentLang);
+
 const API_BASE = window.location.origin;
 const fileInput = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
@@ -560,8 +699,8 @@ checkBtn.addEventListener('click', async () => {
     renderVerdict(data);
   } catch (err) {
     resultEl.innerHTML = `<div class="card verdict-card status-not_found_in_directory">
-      <span class="verdict-stamp">Error</span>
-      <h2>Something went wrong</h2><p>${escapeHtml(err.message)}</p></div>`;
+      <span class="verdict-stamp">${escapeHtml(t('stamps').error)}</span>
+      <h2>${escapeHtml(t('errorTitle'))}</h2><p>${escapeHtml(err.message)}</p></div>`;
   } finally {
     statusEl.style.display = 'none';
     checkBtn.classList.remove('loading');
@@ -575,24 +714,15 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-const STAMP_LABELS = {
-  found_in_directory: 'Found in directory',
-  name_found_manufacturer_mismatch: 'Manufacturer mismatch',
-  similar_name_only: 'Similar name only',
-  not_found_in_directory: 'Not found',
-  expired: 'Expired',
-  unreadable: 'Unreadable photo',
-};
-
 function renderVerdict(v) {
   const candidatesHtml = (v.matched_candidates || []).map(c => `
     <div class="candidate">
       <span class="cand-name">${escapeHtml(c.brand_name)}</span> <span class="cand-strength">${escapeHtml(c.strength || '')}</span>
-      <div class="cand-row">Generic: ${escapeHtml(c.generic_name || '—')}</div>
-      <div class="cand-row">Manufacturer: ${escapeHtml(c.manufacturer || '—')}</div>
+      <div class="cand-row">${escapeHtml(t('genericLabel'))}: ${escapeHtml(c.generic_name || '—')}</div>
+      <div class="cand-row">${escapeHtml(t('manufacturerLabel'))}: ${escapeHtml(c.manufacturer || '—')}</div>
       ${c.brand_id ? `
         <div class="ref-toggle" data-brand-id="${escapeHtml(c.brand_id)}">
-          <button class="ref-btn" type="button">What is this medicine for? ▾</button>
+          <button class="ref-btn" type="button">${escapeHtml(t('whatIsThisFor'))} ▾</button>
           <div class="ref-body" hidden></div>
         </div>
       ` : ''}
@@ -604,7 +734,7 @@ function renderVerdict(v) {
     .map(([k, val]) => `<tr><td>${escapeHtml(k.replace(/_/g, ' '))}</td><td>${escapeHtml(val ?? '—')}</td></tr>`)
     .join('');
 
-  const stamp = STAMP_LABELS[v.status] || v.status;
+  const stamp = t('stamps')[v.status] || v.status;
 
   resultEl.innerHTML = `
     <div class="card verdict-card status-${v.status}">
@@ -614,7 +744,7 @@ function renderVerdict(v) {
       <p class="action"><span class="arrow">➜</span> ${escapeHtml(v.action)}</p>
       ${candidatesHtml ? `<div class="candidates">${candidatesHtml}</div>` : ''}
       <details class="details">
-        <summary>What was read from the photo</summary>
+        <summary>${escapeHtml(t('whatWasRead'))}</summary>
         <table>${extractedRows}</table>
       </details>
     </div>
@@ -635,17 +765,17 @@ async function onRefToggleClick(e) {
 
   if (!body.hidden) {
     body.hidden = true;
-    btn.textContent = 'What is this medicine for? ▾';
+    btn.textContent = `${t('whatIsThisFor')} ▾`;
     return;
   }
 
   if (body.dataset.loaded === 'true') {
     body.hidden = false;
-    btn.textContent = 'Hide medical info ▴';
+    btn.textContent = `${t('hideMedicalInfo')} ▴`;
     return;
   }
 
-  btn.textContent = 'Loading…';
+  btn.textContent = t('loading');
   btn.disabled = true;
   try {
     const res = await fetch(`${API_BASE}/api/reference/${encodeURIComponent(brandId)}`);
@@ -655,26 +785,27 @@ async function onRefToggleClick(e) {
     body.innerHTML = renderReference(data);
     body.dataset.loaded = 'true';
     body.hidden = false;
-    btn.textContent = 'Hide medical info ▴';
+    btn.textContent = `${t('hideMedicalInfo')} ▴`;
   } catch (err) {
     body.innerHTML = `<p class="ref-error">${escapeHtml(err.message)}</p>`;
     body.hidden = false;
-    btn.textContent = 'Hide medical info ▴';
+    btn.textContent = `${t('hideMedicalInfo')} ▴`;
   } finally {
     btn.disabled = false;
   }
 }
 
 function renderReference(r) {
+  const labels = t('refSections');
   const section = (label, text) => text
     ? `<div class="ref-section"><h4>${escapeHtml(label)}</h4><p>${escapeHtml(text)}</p></div>`
     : '';
 
   return `
-    ${section('Used for (Indications)', r.indications)}
-    ${section('Not for (Contraindications)', r.contraindications)}
-    ${section('Possible side effects', r.side_effects)}
-    ${section('Pregnancy & breastfeeding', r.pregnancy_lactation)}
+    ${section(labels.indications, r.indications)}
+    ${section(labels.contraindications, r.contraindications)}
+    ${section(labels.side_effects, r.side_effects)}
+    ${section(labels.pregnancy_lactation, r.pregnancy_lactation)}
     <p class="ref-disclaimer">${escapeHtml(r.disclaimer || '')}</p>
   `;
 }
