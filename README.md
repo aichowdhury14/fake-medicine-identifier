@@ -7,6 +7,8 @@ expiry date has already passed. For a matched medicine, it can also show
 general reference info — what it's used for, contraindications, side
 effects, and pregnancy/lactation warnings.
 
+Live deployment steps (Render, free tier) are in [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Scope boundary on medical info
 
 The "what is this medicine for" feature shows the **standard, textbook
