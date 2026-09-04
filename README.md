@@ -1,5 +1,7 @@
 # Fake Medicine Identifier (Bangladesh)
 
+An initiative by **Atiqul Islam Chowdhury**.
+
 Photo in, safety answer out: snap a picture of a medicine strip/box, and the
 app cross-checks the brand name, strength, and manufacturer against
 Bangladesh's public medicine directory, and checks whether the printed

@@ -412,6 +412,24 @@
   .disclaimer svg { flex: none; width: 18px; height: 18px; stroke: var(--gold); margin-top: 1px; }
   .disclaimer strong { color: var(--ink); }
 
+  .credit { text-align: center; margin-top: 28px; }
+  .credit-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+  .credit-name {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 560;
+    font-size: 1.05rem;
+    color: var(--ink);
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
@@ -465,6 +483,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L14.7 3.86a2 2 0 00-3.4 0z"/></svg>
     <span>This tool cross-checks packaging photos against MedEx's public medicine directory for Bangladesh. It is <strong>not</strong> an official DGDA registration check and cannot guarantee authenticity. Always buy from licensed pharmacies and consult a pharmacist or doctor when in doubt.</span>
   </div>
+
+  <footer class="credit">
+    <p class="credit-eyebrow">An initiative by</p>
+    <p class="credit-name">Atiqul Islam Chowdhury</p>
+  </footer>
 </div>
 
 <script>
