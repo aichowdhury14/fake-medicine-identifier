@@ -152,6 +152,33 @@
   .lang-toggle button:not(.active):hover { color: var(--ink); }
   .lang-toggle button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
+  /* ---------- Mode tabs ---------- */
+  .mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    background: var(--paper-sunken);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .mode-tab {
+    flex: 1;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 9px 6px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mode-tab.active { background: var(--paper-raised); color: var(--accent-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .mode-tab:not(.active):hover { color: var(--ink); }
+  .mode-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
   /* ---------- Cards ---------- */
   .card {
     background: var(--paper-raised);
@@ -318,6 +345,65 @@
     font-variant-numeric: tabular-nums;
   }
   .quota-badge.low { color: var(--warn); font-weight: 600; }
+
+  .batch-status {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    color: var(--ink-soft);
+    margin-top: 12px;
+    font-size: 0.85rem;
+  }
+  .batch-status .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+  .batch-status .dot:nth-child(2) { animation-delay: 0.15s; }
+  .batch-status .dot:nth-child(3) { animation-delay: 0.3s; }
+
+  .batch-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .batch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-sunken);
+  }
+  .batch-item img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; flex: none; border: 1px solid var(--line); }
+  .batch-item .fname { font-size: 0.82rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .batch-item .remove-btn {
+    flex: none;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+  .batch-item .remove-btn:hover { border-color: var(--bad); color: var(--bad); }
+  .batch-count { font-size: 0.78rem; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  .rx-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-sunken);
+    margin-top: 8px;
+  }
+  .rx-line .rx-status-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; }
+  .rx-line.rx-found .rx-status-dot { background: var(--good); }
+  .rx-line.rx-not-found .rx-status-dot { background: var(--warn); }
+  .rx-line .rx-text { flex: 1; min-width: 0; }
+  .rx-line .rx-raw { font-weight: 600; font-size: 0.9rem; }
+  .rx-line .rx-meta { font-size: 0.8rem; color: var(--ink-soft); margin-top: 2px; }
+  .rx-line .rx-uncertain { font-style: italic; color: var(--warn); }
 
   /* ---------- Verdict card ---------- */
   .verdict-card {
@@ -512,7 +598,19 @@
     </div>
   </header>
 
-  <div class="card">
+  <div class="mode-tabs" role="tablist" aria-label="Check mode">
+    <button type="button" class="mode-tab active" id="modeSingleBtn" data-mode="single" role="tab" aria-selected="true">
+      <span data-i18n="modeSingle">One medicine</span>
+    </button>
+    <button type="button" class="mode-tab" id="modeBatchBtn" data-mode="batch" role="tab" aria-selected="false">
+      <span data-i18n="modeBatch">Several medicines</span>
+    </button>
+    <button type="button" class="mode-tab" id="modePrescriptionBtn" data-mode="prescription" role="tab" aria-selected="false">
+      <span data-i18n="modePrescription">A prescription</span>
+    </button>
+  </div>
+
+  <div class="card" id="modeSinglePanel">
     <p class="eyebrow" data-i18n="step1">Step 1 — Photograph the packaging</p>
     <label class="upload-zone" id="uploadZone">
       <span class="upload-icon" aria-hidden="true">
@@ -547,7 +645,68 @@
     <p id="quotaBadge" class="quota-badge" hidden></p>
   </div>
 
+  <div class="card" id="modeBatchPanel" hidden>
+    <p class="eyebrow" data-i18n="batchStep1">Step 1 — Add up to 4 photos</p>
+    <label class="upload-zone" id="batchUploadZone">
+      <span class="upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M16 8l-4-4-4 4M12 4v12"/></svg>
+      </span>
+      <strong data-i18n="batchUploadTitle">Add photos of each medicine</strong>
+      <span class="hint" data-i18n="batchUploadHint">Take photos one at a time, or choose several from your gallery — up to 4</span>
+      <input type="file" id="batchGalleryInput" accept="image/*" multiple data-i18n-aria="batchUploadAria" aria-label="Choose up to 4 medicine photos">
+    </label>
+    <button type="button" class="gallery-link" id="batchCameraZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M16 8l-4-4-4 4M12 4v12"/></svg>
+      <span data-i18n="batchCameraLink">Or add one more photo from the camera</span>
+    </button>
+    <input type="file" id="batchCameraInput" accept="image/*" capture="environment" data-i18n-aria="batchCameraAria" aria-label="Take another medicine photo" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0,0,0,0);">
+
+    <div class="batch-list" id="batchList"></div>
+
+    <button class="primary" id="batchCheckBtn" disabled>
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="btn-label" data-i18n="batchCheckBtn">Check these medicines</span>
+    </button>
+    <p id="batchStatus" class="batch-status" hidden><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; <span data-i18n="batchStatusChecking">Checking each photo…</span></p>
+    <p id="batchQuotaBadge" class="quota-badge" hidden></p>
+  </div>
+
+  <div class="card" id="modePrescriptionPanel" hidden>
+    <p class="eyebrow" data-i18n="rxStep1">Step 1 — Photograph the prescription</p>
+    <label class="upload-zone" id="rxUploadZone">
+      <span class="upload-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M16 8l-4-4-4 4M12 4v12"/></svg>
+      </span>
+      <strong data-i18n="rxUploadTitle">Tap to photograph the prescription</strong>
+      <span class="hint" data-i18n="rxUploadHint">Good light, hold it flat — handwriting is harder to read than print</span>
+      <input type="file" id="rxFileInput" accept="image/*" capture="environment" data-i18n-aria="rxUploadAria" aria-label="Photograph the prescription">
+    </label>
+    <button type="button" class="gallery-link" id="rxGalleryZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span data-i18n="galleryLink">Or choose an existing photo from your gallery</span>
+    </button>
+    <input type="file" id="rxGalleryInput" accept="image/*" data-i18n-aria="galleryAria" aria-label="Choose a photo from your gallery" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0,0,0,0);">
+
+    <div class="preview-wrap" id="rxPreviewWrap">
+      <img id="rxPreview" alt="Selected prescription photo preview">
+      <div class="preview-meta">
+        <div class="fname" id="rxFname"></div>
+        <div class="fsize" id="rxFsize"></div>
+      </div>
+      <button type="button" class="preview-clear" id="rxClearBtn" data-i18n-aria="removePhoto" aria-label="Remove selected photo">✕</button>
+    </div>
+
+    <button class="primary" id="rxCheckBtn" disabled>
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="btn-label" data-i18n="rxCheckBtn">Read this prescription</span>
+    </button>
+    <p id="rxStatus" class="batch-status" hidden><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; <span data-i18n="rxStatusChecking">Reading handwriting…</span></p>
+    <p id="rxQuotaBadge" class="quota-badge" hidden></p>
+  </div>
+
   <div id="result"></div>
+  <div id="batchResult"></div>
+  <div id="rxResult"></div>
 
   <div class="disclaimer">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L14.7 3.86a2 2 0 00-3.4 0z"/></svg>
@@ -602,6 +761,31 @@ const STRINGS = {
       side_effects: 'Possible side effects',
       pregnancy_lactation: 'Pregnancy & breastfeeding',
     },
+    modeSingle: 'One medicine',
+    modeBatch: 'Several medicines',
+    modePrescription: 'A prescription',
+    batchStep1: 'Step 1 — Add up to 4 photos',
+    batchUploadTitle: 'Add photos of each medicine',
+    batchUploadHint: 'Take photos one at a time, or choose several from your gallery — up to 4',
+    batchUploadAria: 'Choose up to 4 medicine photos',
+    batchCameraLink: 'Or add one more photo from the camera',
+    batchCameraAria: 'Take another medicine photo',
+    batchCheckBtn: 'Check these medicines',
+    batchStatusChecking: 'Checking each photo…',
+    batchLimitMsg: 'You can check up to 4 photos at a time.',
+    batchRemove: 'Remove this photo',
+    rxStep1: 'Step 1 — Photograph the prescription',
+    rxUploadTitle: 'Tap to photograph the prescription',
+    rxUploadHint: 'Good light, hold it flat — handwriting is harder to read than print',
+    rxUploadAria: 'Photograph the prescription',
+    rxCheckBtn: 'Read this prescription',
+    rxStatusChecking: 'Reading handwriting…',
+    rxResultsTitle: 'What was transcribed',
+    rxFoundInDirectory: 'Looks like a listed medicine',
+    rxNotFound: 'Not found in the directory',
+    rxUnclear: 'Unclear handwriting',
+    rxUnreadableLines: 'unreadable line(s) skipped',
+    rxDisclaimer: "This only transcribes text from the photo and checks names against the public medicine directory — it does not interpret dosage, verify the prescription is correct or safe, or give medical advice. Always follow your doctor's actual instructions, and ask your pharmacist if anything here looks wrong.",
   },
   bn: {
     appTitle: 'মেডিসিন চেক',
@@ -643,6 +827,31 @@ const STRINGS = {
       side_effects: 'সম্ভাব্য পার্শ্বপ্রতিক্রিয়া',
       pregnancy_lactation: 'গর্ভাবস্থা ও বুকের দুধ খাওয়ানো',
     },
+    modeSingle: 'একটি ওষুধ',
+    modeBatch: 'একাধিক ওষুধ',
+    modePrescription: 'প্রেসক্রিপশন',
+    batchStep1: 'ধাপ ১ — সর্বোচ্চ ৪টি ছবি যোগ করুন',
+    batchUploadTitle: 'প্রতিটি ওষুধের ছবি যোগ করুন',
+    batchUploadHint: 'একে একে ছবি তুলুন, অথবা গ্যালারি থেকে একাধিক বেছে নিন — সর্বোচ্চ ৪টি',
+    batchUploadAria: 'সর্বোচ্চ ৪টি ওষুধের ছবি বেছে নিন',
+    batchCameraLink: 'অথবা ক্যামেরা থেকে আরও একটি ছবি যোগ করুন',
+    batchCameraAria: 'আরেকটি ওষুধের ছবি তুলুন',
+    batchCheckBtn: 'এই ওষুধগুলো যাচাই করুন',
+    batchStatusChecking: 'প্রতিটি ছবি যাচাই করা হচ্ছে…',
+    batchLimitMsg: 'আপনি একবারে সর্বোচ্চ ৪টি ছবি যাচাই করতে পারবেন।',
+    batchRemove: 'এই ছবিটি সরান',
+    rxStep1: 'ধাপ ১ — প্রেসক্রিপশনের ছবি তুলুন',
+    rxUploadTitle: 'প্রেসক্রিপশনের ছবি তুলতে ট্যাপ করুন',
+    rxUploadHint: 'ভালো আলোতে, সমতলভাবে ধরুন — হাতের লেখা ছাপার চেয়ে পড়া কঠিন',
+    rxUploadAria: 'প্রেসক্রিপশনের ছবি তুলুন',
+    rxCheckBtn: 'এই প্রেসক্রিপশনটি পড়ুন',
+    rxStatusChecking: 'হাতের লেখা পড়া হচ্ছে…',
+    rxResultsTitle: 'যা পড়া হয়েছে',
+    rxFoundInDirectory: 'তালিকাভুক্ত ওষুধের মতো মনে হচ্ছে',
+    rxNotFound: 'তালিকায় পাওয়া যায়নি',
+    rxUnclear: 'হাতের লেখা অস্পষ্ট',
+    rxUnreadableLines: 'টি লাইন পড়া যায়নি',
+    rxDisclaimer: 'এটি শুধুমাত্র ছবি থেকে লেখা তুলে ধরে এবং নামগুলো সরকারি ওষুধ তালিকার সাথে মিলিয়ে দেখে — এটি মাত্রা ব্যাখ্যা করে না, প্রেসক্রিপশন সঠিক বা নিরাপদ কিনা যাচাই করে না, বা কোনো চিকিৎসা পরামর্শ দেয় না। সবসময় আপনার ডাক্তারের প্রকৃত নির্দেশ অনুসরণ করুন, এবং কিছু ভুল মনে হলে ফার্মাসিস্টকে জিজ্ঞাসা করুন।',
   },
 };
 
@@ -774,16 +983,17 @@ checkBtn.addEventListener('click', async () => {
   }
 });
 
-async function refreshQuotaBadge() {
+async function refreshQuotaBadge(targetEl) {
+  const el = targetEl || quotaBadge;
   try {
     const res = await fetch(`${API_BASE}/api/health`);
     const data = await res.json();
-    if (typeof data.checks_remaining_today !== 'number') { quotaBadge.hidden = true; return; }
-    quotaBadge.hidden = false;
-    quotaBadge.textContent = t('checksLeftToday').replace('{n}', data.checks_remaining_today).replace('{total}', data.daily_limit);
-    quotaBadge.classList.toggle('low', data.checks_remaining_today <= 3);
+    if (typeof data.checks_remaining_today !== 'number') { el.hidden = true; return; }
+    el.hidden = false;
+    el.textContent = t('checksLeftToday').replace('{n}', data.checks_remaining_today).replace('{total}', data.daily_limit);
+    el.classList.toggle('low', data.checks_remaining_today <= 3);
   } catch {
-    quotaBadge.hidden = true;
+    el.hidden = true;
   }
 }
 
@@ -886,6 +1096,235 @@ function renderReference(r) {
     ${section(labels.side_effects, r.side_effects)}
     ${section(labels.pregnancy_lactation, r.pregnancy_lactation)}
     <p class="ref-disclaimer">${escapeHtml(r.disclaimer || '')}</p>
+  `;
+}
+
+/* ---------- Mode switching ---------- */
+const modeTabs = document.querySelectorAll('.mode-tab');
+const modePanels = {
+  single: document.getElementById('modeSinglePanel'),
+  batch: document.getElementById('modeBatchPanel'),
+  prescription: document.getElementById('modePrescriptionPanel'),
+};
+const modeResults = {
+  single: document.getElementById('result'),
+  batch: document.getElementById('batchResult'),
+  prescription: document.getElementById('rxResult'),
+};
+
+function setMode(mode) {
+  modeTabs.forEach(btn => {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+  Object.entries(modePanels).forEach(([key, panel]) => { panel.hidden = key !== mode; });
+  Object.entries(modeResults).forEach(([key, el]) => { el.hidden = key !== mode; });
+}
+
+modeTabs.forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+Object.values(modeResults).forEach(el => { if (el !== modeResults.single) el.hidden = true; });
+
+/* ---------- Batch mode ---------- */
+const MAX_BATCH_SIZE = 4;
+const batchGalleryInput = document.getElementById('batchGalleryInput');
+const batchCameraInput = document.getElementById('batchCameraInput');
+const batchCameraZone = document.getElementById('batchCameraZone');
+const batchList = document.getElementById('batchList');
+const batchCheckBtn = document.getElementById('batchCheckBtn');
+const batchStatusEl = document.getElementById('batchStatus');
+const batchResultEl = document.getElementById('batchResult');
+const batchQuotaBadge = document.getElementById('batchQuotaBadge');
+
+let batchFiles = [];
+
+function renderBatchList() {
+  batchList.innerHTML = batchFiles.map((file, i) => `
+    <div class="batch-item">
+      <img src="${URL.createObjectURL(file)}" alt="">
+      <span class="fname">${escapeHtml(file.name)}</span>
+      <button type="button" class="remove-btn" data-index="${i}" aria-label="${escapeHtml(t('batchRemove'))}">✕</button>
+    </div>
+  `).join('') + (batchFiles.length ? `<p class="batch-count">${batchFiles.length} / ${MAX_BATCH_SIZE}</p>` : '');
+
+  batchList.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      batchFiles.splice(Number(btn.dataset.index), 1);
+      renderBatchList();
+      batchCheckBtn.disabled = batchFiles.length === 0;
+    });
+  });
+}
+
+function addBatchFiles(fileList) {
+  const incoming = Array.from(fileList || []);
+  for (const file of incoming) {
+    if (batchFiles.length >= MAX_BATCH_SIZE) {
+      batchResultEl.innerHTML = `<div class="card verdict-card status-quota">
+        <span class="verdict-stamp">${escapeHtml(t('stamps').quota)}</span>
+        <p>${escapeHtml(t('batchLimitMsg'))}</p></div>`;
+      break;
+    }
+    batchFiles.push(file);
+  }
+  renderBatchList();
+  batchCheckBtn.disabled = batchFiles.length === 0;
+}
+
+batchGalleryInput.addEventListener('change', () => { addBatchFiles(batchGalleryInput.files); batchGalleryInput.value = ''; });
+batchCameraInput.addEventListener('change', () => { addBatchFiles(batchCameraInput.files); batchCameraInput.value = ''; });
+batchCameraZone.addEventListener('click', () => batchCameraInput.click());
+
+batchCheckBtn.addEventListener('click', async () => {
+  if (batchFiles.length === 0) return;
+  batchCheckBtn.disabled = true;
+  batchCheckBtn.classList.add('loading');
+  batchStatusEl.style.display = 'flex';
+  batchResultEl.innerHTML = '';
+
+  const formData = new FormData();
+  batchFiles.forEach(f => formData.append('photos', f));
+
+  try {
+    const res = await fetch(`${API_BASE}/api/check-batch?lang=${encodeURIComponent(currentLang)}`, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    renderBatchResults(data.results);
+    refreshQuotaBadge(batchQuotaBadge);
+  } catch (err) {
+    batchResultEl.innerHTML = `<div class="card verdict-card status-not_found_in_directory">
+      <span class="verdict-stamp">${escapeHtml(t('stamps').error)}</span>
+      <h2>${escapeHtml(t('errorTitle'))}</h2><p>${escapeHtml(err.message)}</p></div>`;
+  } finally {
+    batchStatusEl.style.display = 'none';
+    batchCheckBtn.classList.remove('loading');
+    batchCheckBtn.disabled = false;
+  }
+});
+
+function renderBatchResults(results) {
+  const stamp = t('stamps');
+  batchResultEl.innerHTML = results.map(r => {
+    if (!r.ok) {
+      return `<div class="card verdict-card status-not_found_in_directory">
+        <span class="verdict-stamp">${escapeHtml(stamp.error)}</span>
+        <h2>${escapeHtml(r.filename || '')}</h2><p>${escapeHtml(r.error || '')}</p></div>`;
+    }
+    const v = r.verdict;
+    const label = stamp[v.status] || v.status;
+    return `<div class="card verdict-card status-${v.status}">
+      <span class="verdict-stamp">${escapeHtml(label)}</span>
+      <h2>${escapeHtml(v.headline)}</h2>
+      <p>${escapeHtml(v.explanation)}</p>
+      <p class="action"><span class="arrow">➜</span> ${escapeHtml(v.action)}</p>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- Prescription mode ---------- */
+const rxFileInput = document.getElementById('rxFileInput');
+const rxGalleryInput = document.getElementById('rxGalleryInput');
+const rxGalleryZone = document.getElementById('rxGalleryZone');
+const rxPreviewWrap = document.getElementById('rxPreviewWrap');
+const rxPreview = document.getElementById('rxPreview');
+const rxFname = document.getElementById('rxFname');
+const rxFsize = document.getElementById('rxFsize');
+const rxClearBtn = document.getElementById('rxClearBtn');
+const rxCheckBtn = document.getElementById('rxCheckBtn');
+const rxStatusEl = document.getElementById('rxStatus');
+const rxResultEl = document.getElementById('rxResult');
+const rxQuotaBadge = document.getElementById('rxQuotaBadge');
+
+let rxSelectedFile = null;
+
+function setRxFile(file) {
+  if (!file) return;
+  rxSelectedFile = file;
+  rxPreview.src = URL.createObjectURL(file);
+  rxFname.textContent = file.name;
+  rxFsize.textContent = formatBytes(file.size);
+  rxPreviewWrap.classList.add('show');
+  rxCheckBtn.disabled = false;
+  rxResultEl.innerHTML = '';
+}
+
+rxFileInput.addEventListener('change', () => setRxFile(rxFileInput.files[0]));
+rxGalleryInput.addEventListener('change', () => setRxFile(rxGalleryInput.files[0]));
+rxGalleryZone.addEventListener('click', () => rxGalleryInput.click());
+rxClearBtn.addEventListener('click', () => {
+  rxSelectedFile = null;
+  rxFileInput.value = '';
+  rxGalleryInput.value = '';
+  rxPreviewWrap.classList.remove('show');
+  rxCheckBtn.disabled = true;
+  rxResultEl.innerHTML = '';
+});
+
+rxCheckBtn.addEventListener('click', async () => {
+  if (!rxSelectedFile) return;
+  rxCheckBtn.disabled = true;
+  rxCheckBtn.classList.add('loading');
+  rxStatusEl.style.display = 'flex';
+  rxResultEl.innerHTML = '';
+
+  const formData = new FormData();
+  formData.append('photo', rxSelectedFile);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/check-prescription?lang=${encodeURIComponent(currentLang)}`, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.status === 429) {
+      rxResultEl.innerHTML = `<div class="card verdict-card status-quota">
+        <span class="verdict-stamp">${escapeHtml(t('stamps').quota)}</span>
+        <h2>${escapeHtml(t('quotaTitle'))}</h2><p>${escapeHtml(data.detail || t('quotaMessage'))}</p></div>`;
+      refreshQuotaBadge(rxQuotaBadge);
+      return;
+    }
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    renderPrescriptionResult(data);
+    refreshQuotaBadge(rxQuotaBadge);
+  } catch (err) {
+    rxResultEl.innerHTML = `<div class="card verdict-card status-not_found_in_directory">
+      <span class="verdict-stamp">${escapeHtml(t('stamps').error)}</span>
+      <h2>${escapeHtml(t('errorTitle'))}</h2><p>${escapeHtml(err.message)}</p></div>`;
+  } finally {
+    rxStatusEl.style.display = 'none';
+    rxCheckBtn.classList.remove('loading');
+    rxCheckBtn.disabled = false;
+  }
+});
+
+function renderPrescriptionResult(data) {
+  const lines = (data.lines || []).map(line => {
+    const statusClass = line.confidence === 'uncertain'
+      ? 'rx-not-found'
+      : (line.directory_match ? 'rx-found' : 'rx-not-found');
+    const statusLabel = line.directory_match ? t('rxFoundInDirectory') : t('rxNotFound');
+    const candidateNames = (line.candidates || []).map(c => c.brand_name).filter(Boolean);
+    return `
+      <div class="rx-line ${statusClass}">
+        <span class="rx-status-dot"></span>
+        <div class="rx-text">
+          <div class="rx-raw">${escapeHtml(line.raw_text)}</div>
+          <div class="rx-meta">
+            ${line.confidence === 'uncertain' ? `<span class="rx-uncertain">${escapeHtml(t('rxUnclear'))}</span> · ` : ''}
+            ${escapeHtml(statusLabel)}${candidateNames.length ? ': ' + escapeHtml(candidateNames.join(', ')) : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const unreadableNote = data.unreadable_lines > 0
+    ? `<p class="ref-disclaimer">${data.unreadable_lines} ${escapeHtml(t('rxUnreadableLines'))}</p>`
+    : '';
+
+  rxResultEl.innerHTML = `
+    <div class="card">
+      <p class="eyebrow">${escapeHtml(t('rxResultsTitle'))}</p>
+      ${lines || `<p>${escapeHtml(t('rxNotFound'))}</p>`}
+      ${unreadableNote}
+      <p class="ref-disclaimer">${escapeHtml(data.disclaimer || t('rxDisclaimer'))}</p>
+    </div>
   `;
 }
 

@@ -9,3 +9,4 @@ data/*.png
 data/*_result*.json
 data/*_log*.txt
 .env
+*.pdf

@@ -73,6 +73,32 @@ Respond with ONLY a JSON object, no other text, no markdown fences, in this exac
   "notes": string
 }"""
 
+PRESCRIPTION_PROMPT = """You are looking at a photo of a doctor's prescription (handwritten or printed) from Bangladesh.
+
+Your ONLY job is to transcribe the medicine names that are written on it, as literally as possible.
+Do NOT interpret dosage instructions, do NOT explain what any medicine is for, do NOT suggest
+alternatives, and do NOT comment on whether the prescription looks correct or safe. This is pure
+transcription, not medical interpretation.
+
+For each medicine name you can make out, include exactly what's written next to it (strength,
+frequency, duration) as raw transcribed text, not as an interpreted instruction — you are copying
+words down, not giving advice.
+
+If handwriting is too unclear to transcribe a given line with reasonable confidence, do not guess —
+report that line as unreadable instead of inventing a plausible-sounding medicine name.
+
+Respond with ONLY a JSON object, no other text, no markdown fences, in this exact shape:
+{
+  "medicines": [
+    {
+      "raw_text": string,   // exactly what's written for this line, transcribed as-is
+      "confidence": "clear" | "uncertain"
+    }
+  ],
+  "unreadable_lines": integer,  // count of lines that looked like a medicine entry but couldn't be transcribed at all
+  "notes": string  // e.g. "handwriting very small", "photo angle cuts off left margin"
+}"""
+
 
 @dataclass
 class ExtractedMedicine:
@@ -87,6 +113,19 @@ class ExtractedMedicine:
     notes: str
 
 
+@dataclass
+class PrescriptionLine:
+    raw_text: str
+    confidence: str
+
+
+@dataclass
+class ExtractedPrescription:
+    medicines: list[PrescriptionLine]
+    unreadable_lines: int
+    notes: str
+
+
 def _mime_type_for(filename: str) -> str:
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else "jpeg"
     return {
@@ -97,7 +136,8 @@ def _mime_type_for(filename: str) -> str:
     }.get(ext, "image/jpeg")
 
 
-def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> ExtractedMedicine:
+def _call_gemini_json(image_bytes: bytes, filename: str, prompt: str) -> dict:
+    """Shared retry/error-classification logic for any single-image, JSON-response Gemini call."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable is not set")
@@ -112,7 +152,7 @@ def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> Ex
                 model=MODEL,
                 contents=[
                     types.Part.from_bytes(data=image_bytes, mime_type=_mime_type_for(filename)),
-                    EXTRACTION_PROMPT,
+                    prompt,
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -142,10 +182,13 @@ def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> Ex
     raw_text = (response.text or "").strip()
 
     try:
-        data = json.loads(raw_text)
+        return json.loads(raw_text)
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Could not parse model response as JSON: {raw_text[:300]}") from exc
 
+
+def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> ExtractedMedicine:
+    data = _call_gemini_json(image_bytes, filename, EXTRACTION_PROMPT)
     return ExtractedMedicine(
         brand_name=data.get("brand_name"),
         strength=data.get("strength"),
@@ -155,5 +198,24 @@ def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> Ex
         expiry_date=data.get("expiry_date"),
         manufacture_date=data.get("manufacture_date"),
         legibility=data.get("legibility", "poor"),
+        notes=data.get("notes", ""),
+    )
+
+
+def extract_prescription_text(image_bytes: bytes, filename: str = "prescription.jpg") -> ExtractedPrescription:
+    """
+    Transcribes medicine names from a prescription photo. Deliberately does
+    NOT interpret dosage, explain medicines, or suggest anything — pure
+    OCR/transcription, kept separate from any diagnosis-adjacent behavior.
+    """
+    data = _call_gemini_json(image_bytes, filename, PRESCRIPTION_PROMPT)
+    medicines = [
+        PrescriptionLine(raw_text=m.get("raw_text", ""), confidence=m.get("confidence", "uncertain"))
+        for m in data.get("medicines", [])
+        if m.get("raw_text")
+    ]
+    return ExtractedPrescription(
+        medicines=medicines,
+        unreadable_lines=data.get("unreadable_lines", 0),
         notes=data.get("notes", ""),
     )
