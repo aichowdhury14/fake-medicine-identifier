@@ -205,6 +205,25 @@
   .upload-zone span.hint { display: block; color: var(--ink-soft); font-size: 0.82rem; max-width: 34ch; margin: 0 auto; }
   input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
+  .gallery-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--accent-strong);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .gallery-link:hover { background: var(--accent-soft); }
+  .gallery-link svg { flex: none; }
+  .gallery-link:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+
   .preview-wrap {
     display: none;
     align-items: center;
@@ -496,9 +515,15 @@
       <span class="upload-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M16 8l-4-4-4 4M12 4v12"/></svg>
       </span>
-      <strong data-i18n="uploadTitle">Tap to take or upload a photo</strong>
+      <strong data-i18n="uploadTitle">Tap to take a photo</strong>
       <span class="hint" data-i18n="uploadHint">Show the brand name, strength, manufacturer, and expiry date clearly</span>
-      <input type="file" id="fileInput" accept="image/*" data-i18n-aria="uploadAria" aria-label="Upload a photo of the medicine packaging">
+      <input type="file" id="fileInput" accept="image/*" capture="environment" data-i18n-aria="uploadAria" aria-label="Take a photo of the medicine packaging">
+    </label>
+
+    <label class="gallery-link" id="galleryZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span data-i18n="galleryLink">Or choose an existing photo from your gallery</span>
+      <input type="file" id="galleryInput" accept="image/*" data-i18n-aria="galleryAria" aria-label="Choose a photo from your gallery">
     </label>
 
     <div class="preview-wrap" id="previewWrap">
@@ -537,9 +562,11 @@ const STRINGS = {
     appTitle: 'Medicine Check',
     appSubtitle: "Cross-check packaging against Bangladesh's public drug directory",
     step1: 'Step 1 — Photograph the packaging',
-    uploadTitle: 'Tap to take or upload a photo',
+    uploadTitle: 'Tap to take a photo',
     uploadHint: 'Show the brand name, strength, manufacturer, and expiry date clearly',
-    uploadAria: 'Upload a photo of the medicine packaging',
+    uploadAria: 'Take a photo of the medicine packaging',
+    galleryLink: 'Or choose an existing photo from your gallery',
+    galleryAria: 'Choose a photo from your gallery',
     removePhoto: 'Remove selected photo',
     checkBtn: 'Check this medicine',
     statusChecking: 'Reading packaging and checking directory…',
@@ -576,9 +603,11 @@ const STRINGS = {
     appTitle: 'মেডিসিন চেক',
     appSubtitle: 'বাংলাদেশের সরকারি ওষুধ তালিকার সাথে প্যাকেজিং যাচাই করুন',
     step1: 'ধাপ ১ — প্যাকেজিংয়ের ছবি তুলুন',
-    uploadTitle: 'ছবি তুলতে বা আপলোড করতে ট্যাপ করুন',
+    uploadTitle: 'ছবি তুলতে ট্যাপ করুন',
     uploadHint: 'ব্র্যান্ডের নাম, শক্তি, প্রস্তুতকারক এবং মেয়াদ উত্তীর্ণের তারিখ স্পষ্টভাবে দেখান',
-    uploadAria: 'ওষুধের প্যাকেজিংয়ের একটি ছবি আপলোড করুন',
+    uploadAria: 'ওষুধের প্যাকেজিংয়ের একটি ছবি তুলুন',
+    galleryLink: 'অথবা গ্যালারি থেকে একটি বিদ্যমান ছবি বেছে নিন',
+    galleryAria: 'গ্যালারি থেকে একটি ছবি বেছে নিন',
     removePhoto: 'নির্বাচিত ছবি সরান',
     checkBtn: 'এই ওষুধটি যাচাই করুন',
     statusChecking: 'প্যাকেজিং পড়া হচ্ছে এবং তালিকা যাচাই করা হচ্ছে…',
@@ -652,6 +681,7 @@ document.getElementById('langBn').addEventListener('click', () => applyLang('bn'
 
 const API_BASE = window.location.origin;
 const fileInput = document.getElementById('fileInput');
+const galleryInput = document.getElementById('galleryInput');
 const uploadZone = document.getElementById('uploadZone');
 const previewWrap = document.getElementById('previewWrap');
 const preview = document.getElementById('preview');
@@ -683,6 +713,7 @@ function setFile(file) {
 }
 
 fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+galleryInput.addEventListener('change', () => setFile(galleryInput.files[0]));
 
 ['dragenter', 'dragover'].forEach(evt =>
   uploadZone.addEventListener(evt, e => { e.preventDefault(); uploadZone.classList.add('dragover'); })
