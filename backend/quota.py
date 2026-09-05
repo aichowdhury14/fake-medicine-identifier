@@ -71,10 +71,28 @@ def get_status() -> QuotaStatus:
 
 
 def record_attempt() -> None:
-    """Call once per Gemini API call actually made (success or failure alike — it still spent a slot)."""
+    """Call once per successful Gemini vision call, to count it against today's local budget."""
     with _lock:
         state = _load_state()
         today = _today_key()
         state = {today: state.get(today, 0)}  # drop older days, keep the file small
         state[today] += 1
         _save_state(state)
+
+
+def mark_exhausted() -> None:
+    """
+    Snap today's local counter straight to the daily limit.
+
+    Call this when Gemini itself reports 429 RESOURCE_EXHAUSTED — Google's
+    real account-level quota is the actual ceiling, and it can be hit even
+    while our local counter still shows room (shared across all traffic
+    hitting this API key, including testing done outside this app). Once
+    that happens, there's no point letting further requests through only
+    to have Gemini reject them too, so this keeps the local counter honest
+    until the shared daily quota actually resets.
+    """
+    with _lock:
+        state = _load_state()
+        today = _today_key()
+        _save_state({today: DAILY_LIMIT})

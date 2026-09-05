@@ -751,12 +751,13 @@ checkBtn.addEventListener('click', async () => {
   formData.append('photo', selectedFile);
 
   try {
-    const res = await fetch(`${API_BASE}/api/check`, { method: 'POST', body: formData });
+    const res = await fetch(`${API_BASE}/api/check?lang=${encodeURIComponent(currentLang)}`, { method: 'POST', body: formData });
     const data = await res.json();
     if (res.status === 429) {
       resultEl.innerHTML = `<div class="card verdict-card status-quota">
         <span class="verdict-stamp">${escapeHtml(t('stamps').quota)}</span>
-        <h2>${escapeHtml(t('quotaTitle'))}</h2><p>${escapeHtml(t('quotaMessage'))}</p></div>`;
+        <h2>${escapeHtml(t('quotaTitle'))}</h2><p>${escapeHtml(data.detail || t('quotaMessage'))}</p></div>`;
+      refreshQuotaBadge();
       return;
     }
     if (!res.ok) throw new Error(data.detail || 'Request failed');

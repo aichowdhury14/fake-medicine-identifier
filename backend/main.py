@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import asdict
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -29,6 +29,28 @@ app.add_middleware(
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
+# Only the handful of user-facing error strings that can't go through the
+# frontend's own STRINGS dictionary, because they originate server-side
+# and are shown before any verdict JSON reaches the page's normal i18n path.
+QUOTA_LOCAL_EXHAUSTED_MSG = {
+    "en": "This tool runs on a free daily quota that's been used up for today "
+          "(Bangladesh time resets at 6am). Please try again after it resets.",
+    "bn": "এই টুলটি আজকের জন্য একটি বিনামূল্যে দৈনিক সীমার মধ্যে চলে, যা শেষ হয়ে গেছে "
+          "(বাংলাদেশ সময় সকাল ৬টায় পুনরায় চালু হয়)। অনুগ্রহ করে পরে আবার চেষ্টা করুন।",
+}
+QUOTA_REAL_EXHAUSTED_MSG = {
+    "en": "This tool has hit Google's real daily limit for today, which can happen "
+          "even if the counter on this page still showed checks left. Please try "
+          "again after it resets (around 6am Bangladesh time).",
+    "bn": "এই টুলটি আজকের জন্য Google-এর প্রকৃত দৈনিক সীমায় পৌঁছে গেছে, যা এই পাতার "
+          "কাউন্টারে এখনও যাচাই বাকি দেখালেও ঘটতে পারে। অনুগ্রহ করে সীমা পুনরায় চালু হওয়ার "
+          "পর আবার চেষ্টা করুন (বাংলাদেশ সময় প্রায় সকাল ৬টা)।",
+}
+
+
+def _quota_message(messages: dict[str, str], lang: str) -> str:
+    return messages.get(lang, messages["en"])
+
 
 @app.get("/api/health")
 def health():
@@ -44,7 +66,7 @@ def health():
 
 
 @app.post("/api/check")
-async def check_medicine(photo: UploadFile = File(...)):
+async def check_medicine(photo: UploadFile = File(...), lang: str = Query("en")):
     if photo.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(400, f"Unsupported file type: {photo.content_type}. Use JPEG, PNG, or WebP.")
 
@@ -56,23 +78,22 @@ async def check_medicine(photo: UploadFile = File(...)):
 
     q = quota.get_status()
     if q.exhausted:
-        raise HTTPException(
-            429,
-            "This tool runs on a free daily quota that's been used up for today "
-            "(Bangladesh time resets at 6am). Please try again after it resets.",
-        )
+        raise HTTPException(429, _quota_message(QUOTA_LOCAL_EXHAUSTED_MSG, lang))
 
-    quota.record_attempt()
     try:
         extracted = extract_medicine_info(image_bytes, photo.filename or "photo.jpg")
     except QuotaExceededError:
-        raise HTTPException(
-            429,
-            "This tool runs on a free daily quota that's been used up for today. "
-            "Please try again after it resets.",
-        )
+        # Google's own account-level quota is exhausted — a different, harder limit
+        # than our local per-instance counter below, and can be hit even while our
+        # counter still shows room (e.g. other testing/traffic used the real quota).
+        # Snap our local counter to exhausted too so the badge stops overpromising
+        # availability until the shared daily quota actually resets.
+        quota.mark_exhausted()
+        raise HTTPException(429, _quota_message(QUOTA_REAL_EXHAUSTED_MSG, lang))
     except RuntimeError as exc:
         raise HTTPException(502, f"Could not analyze image: {exc}")
+
+    quota.record_attempt()
 
     db = get_db()
     lookup_result = db.lookup(extracted.brand_name or "", extracted.manufacturer)
