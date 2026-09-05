@@ -13,13 +13,24 @@ without much warning (confirmed directly against a live key), so the
 alias is more durable for a prototype that shouldn't need code changes
 every few months.
 
-Free tier notes (Gemini API, as of this writing): no card required, low
-triple-digit requests/day and single-digit-to-low-teens requests/minute,
-varies by exact model. On the free tier Google may use submitted data to
-improve their products (this does not apply on paid tiers) — fine for a
-prototype, but worth knowing before sending real patient/medicine photos
-at scale. The API can also return transient 503 "high demand" errors
-under load, unrelated to your key or code — worth a retry, not a bug.
+Free tier notes (Gemini API, confirmed directly against a live key on
+2026-09-05): the daily cap has tightened significantly since this was
+first built — currently 20 requests/day for the resolved flash model
+(GenerateRequestsPerDayPerProjectPerModel-FreeTier), not the ~250/day
+figure that was true earlier in the year. On the free tier Google may
+also use submitted data to improve their products (not the case on paid
+tiers).
+
+Two distinct failure modes need different handling:
+- 503 UNAVAILABLE ("high demand") is transient server load — retrying
+  after a short delay usually works.
+- 429 RESOURCE_EXHAUSTED (daily/per-minute quota hit) will NOT resolve
+  by retrying within the same request — the API itself reports a
+  retryDelay of tens of seconds to (for the daily cap) potentially
+  hours. Retrying this immediately just burns wall-clock time for a
+  guaranteed-identical failure, so it's treated as non-retryable here;
+  the caller (main.py) uses the local daily counter in quota.py to avoid
+  even attempting a call once the day's budget is known to be spent.
 """
 
 from __future__ import annotations
@@ -31,10 +42,15 @@ from dataclasses import dataclass
 
 from google import genai
 from google.genai import types
+from google.genai.errors import ClientError
 
 MODEL = "gemini-flash-latest"
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 2
+
+
+class QuotaExceededError(RuntimeError):
+    """Raised when Gemini reports the daily/per-minute quota is exhausted (429). Not retryable within this request."""
 
 EXTRACTION_PROMPT = """You are looking at a photo of a medicine strip, blister pack, or box sold in Bangladesh.
 
@@ -99,6 +115,14 @@ def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> Ex
                 ),
             )
             break
+        except ClientError as exc:
+            if exc.code == 429:
+                raise QuotaExceededError(
+                    "Gemini's free-tier request quota is exhausted for now."
+                ) from exc
+            last_error = exc
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY_SECONDS * attempt)
         except Exception as exc:
             last_error = exc
             if attempt < MAX_RETRIES:

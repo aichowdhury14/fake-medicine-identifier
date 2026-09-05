@@ -288,6 +288,15 @@
   #status .dot:nth-child(3) { animation-delay: 0.3s; }
   @keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
 
+  .quota-badge {
+    text-align: center;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    margin: 10px 0 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .quota-badge.low { color: var(--warn); font-weight: 600; }
+
   /* ---------- Verdict card ---------- */
   .verdict-card {
     position: relative;
@@ -303,6 +312,7 @@
   .verdict-card.status-not_found_in_directory,
   .verdict-card.status-name_found_manufacturer_mismatch,
   .verdict-card.status-expired { border-left-color: var(--bad); }
+  .verdict-card.status-quota { border-left-color: var(--gold); }
 
   .verdict-stamp {
     display: inline-flex;
@@ -322,6 +332,7 @@
   .status-not_found_in_directory .verdict-stamp,
   .status-name_found_manufacturer_mismatch .verdict-stamp,
   .status-expired .verdict-stamp { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad-line); }
+  .status-quota .verdict-stamp { background: var(--gold-soft); color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); }
 
   .verdict-card h2 {
     font-family: "Fraunces", "Noto Sans Bengali", Georgia, serif;
@@ -504,6 +515,7 @@
       <span class="btn-label" data-i18n="checkBtn">Check this medicine</span>
     </button>
     <p id="status"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp; <span data-i18n="statusChecking">Reading packaging and checking directory…</span></p>
+    <p id="quotaBadge" class="quota-badge" hidden></p>
   </div>
 
   <div id="result"></div>
@@ -540,6 +552,9 @@ const STRINGS = {
     hideMedicalInfo: 'Hide medical info',
     loading: 'Loading…',
     whatWasRead: 'What was read from the photo',
+    quotaTitle: "Today's free checks are used up",
+    quotaMessage: 'This tool runs on a free daily limit to stay free for everyone. Please come back after it resets (around 6am Bangladesh time).',
+    checksLeftToday: '{n} of {total} free checks left today',
     stamps: {
       found_in_directory: 'Found in directory',
       name_found_manufacturer_mismatch: 'Manufacturer mismatch',
@@ -548,6 +563,7 @@ const STRINGS = {
       expired: 'Expired',
       unreadable: 'Unreadable photo',
       error: 'Error',
+      quota: 'Daily limit reached',
     },
     refSections: {
       indications: 'Used for (Indications)',
@@ -575,6 +591,9 @@ const STRINGS = {
     hideMedicalInfo: 'তথ্য লুকান',
     loading: 'লোড হচ্ছে…',
     whatWasRead: 'ছবি থেকে যা পড়া হয়েছে',
+    quotaTitle: 'আজকের বিনামূল্যে যাচাই শেষ হয়ে গেছে',
+    quotaMessage: 'সবার জন্য বিনামূল্যে রাখতে এই টুলটি দৈনিক একটি সীমার মধ্যে চলে। অনুগ্রহ করে পুনরায় চালু হওয়ার পর আসুন (বাংলাদেশ সময় প্রায় সকাল ৬টায়)।',
+    checksLeftToday: 'আজ আর {n}/{total} টি বিনামূল্যে যাচাই বাকি আছে',
     stamps: {
       found_in_directory: 'তালিকায় পাওয়া গেছে',
       name_found_manufacturer_mismatch: 'প্রস্তুতকারক মিলছে না',
@@ -583,6 +602,7 @@ const STRINGS = {
       expired: 'মেয়াদ উত্তীর্ণ',
       unreadable: 'ছবিটি পড়া যায়নি',
       error: 'ত্রুটি',
+      quota: 'দৈনিক সীমা শেষ',
     },
     refSections: {
       indications: 'ব্যবহার (কী কাজে লাগে)',
@@ -624,11 +644,11 @@ function applyLang(lang) {
   document.getElementById('langEn').classList.toggle('active', lang === 'en');
   document.getElementById('langBn').classList.toggle('active', lang === 'bn');
   document.getElementById('checkBtn').querySelector('.btn-label').textContent = t('checkBtn');
+  refreshQuotaBadge();
 }
 
 document.getElementById('langEn').addEventListener('click', () => applyLang('en'));
 document.getElementById('langBn').addEventListener('click', () => applyLang('bn'));
-applyLang(currentLang);
 
 const API_BASE = window.location.origin;
 const fileInput = document.getElementById('fileInput');
@@ -641,6 +661,7 @@ const clearBtn = document.getElementById('clearBtn');
 const checkBtn = document.getElementById('checkBtn');
 const statusEl = document.getElementById('status');
 const resultEl = document.getElementById('result');
+const quotaBadge = document.getElementById('quotaBadge');
 
 let selectedFile = null;
 
@@ -695,8 +716,15 @@ checkBtn.addEventListener('click', async () => {
   try {
     const res = await fetch(`${API_BASE}/api/check`, { method: 'POST', body: formData });
     const data = await res.json();
+    if (res.status === 429) {
+      resultEl.innerHTML = `<div class="card verdict-card status-quota">
+        <span class="verdict-stamp">${escapeHtml(t('stamps').quota)}</span>
+        <h2>${escapeHtml(t('quotaTitle'))}</h2><p>${escapeHtml(t('quotaMessage'))}</p></div>`;
+      return;
+    }
     if (!res.ok) throw new Error(data.detail || 'Request failed');
     renderVerdict(data);
+    refreshQuotaBadge();
   } catch (err) {
     resultEl.innerHTML = `<div class="card verdict-card status-not_found_in_directory">
       <span class="verdict-stamp">${escapeHtml(t('stamps').error)}</span>
@@ -707,6 +735,19 @@ checkBtn.addEventListener('click', async () => {
     checkBtn.disabled = false;
   }
 });
+
+async function refreshQuotaBadge() {
+  try {
+    const res = await fetch(`${API_BASE}/api/health`);
+    const data = await res.json();
+    if (typeof data.checks_remaining_today !== 'number') { quotaBadge.hidden = true; return; }
+    quotaBadge.hidden = false;
+    quotaBadge.textContent = t('checksLeftToday').replace('{n}', data.checks_remaining_today).replace('{total}', data.daily_limit);
+    quotaBadge.classList.toggle('low', data.checks_remaining_today <= 3);
+  } catch {
+    quotaBadge.hidden = true;
+  }
+}
 
 function escapeHtml(str) {
   const d = document.createElement('div');
@@ -809,6 +850,8 @@ function renderReference(r) {
     <p class="ref-disclaimer">${escapeHtml(r.disclaimer || '')}</p>
   `;
 }
+
+applyLang(currentLang);
 </script>
 </body>
 </html>

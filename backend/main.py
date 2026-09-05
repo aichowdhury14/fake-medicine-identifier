@@ -8,10 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+import quota
 from drug_db import get_db
 from indications import get_reference
 from verdict import build_verdict
-from vision import extract_medicine_info
+from vision import QuotaExceededError, extract_medicine_info
 
 app = FastAPI(title="Fake Medicine Identifier (Bangladesh)")
 
@@ -32,10 +33,13 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 @app.get("/api/health")
 def health():
     db = get_db()
+    q = quota.get_status()
     return {
         "status": "ok",
         "drug_records_loaded": len(db),
         "api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
+        "checks_remaining_today": q.remaining,
+        "daily_limit": q.limit,
     }
 
 
@@ -50,8 +54,23 @@ async def check_medicine(photo: UploadFile = File(...)):
     if len(image_bytes) == 0:
         raise HTTPException(400, "Empty file.")
 
+    q = quota.get_status()
+    if q.exhausted:
+        raise HTTPException(
+            429,
+            "This tool runs on a free daily quota that's been used up for today "
+            "(Bangladesh time resets at 6am). Please try again after it resets.",
+        )
+
+    quota.record_attempt()
     try:
         extracted = extract_medicine_info(image_bytes, photo.filename or "photo.jpg")
+    except QuotaExceededError:
+        raise HTTPException(
+            429,
+            "This tool runs on a free daily quota that's been used up for today. "
+            "Please try again after it resets.",
+        )
     except RuntimeError as exc:
         raise HTTPException(502, f"Could not analyze image: {exc}")
 

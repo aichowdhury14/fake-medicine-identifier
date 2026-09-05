@@ -2,6 +2,7 @@ venv/
 __pycache__/
 *.pyc
 data/indications_cache/
+data/quota_state.json
 data/*.jpg
 data/*.jpeg
 data/*.png
