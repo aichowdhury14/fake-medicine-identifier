@@ -42,7 +42,7 @@ from dataclasses import dataclass
 
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import ClientError, ServerError
 
 MODEL = "gemini-flash-latest"
 MAX_RETRIES = 3
@@ -51,6 +51,10 @@ RETRY_DELAY_SECONDS = 2
 
 class QuotaExceededError(RuntimeError):
     """Raised when Gemini reports the daily/per-minute quota is exhausted (429). Not retryable within this request."""
+
+
+class ServiceUnavailableError(RuntimeError):
+    """Raised when Gemini is transiently overloaded (503) and stays that way through all retries."""
 
 EXTRACTION_PROMPT = """You are looking at a photo of a medicine strip, blister pack, or box sold in Bangladesh.
 
@@ -129,6 +133,10 @@ def extract_medicine_info(image_bytes: bytes, filename: str = "photo.jpg") -> Ex
                 time.sleep(RETRY_DELAY_SECONDS * attempt)
 
     if response is None:
+        if isinstance(last_error, ServerError):
+            raise ServiceUnavailableError(
+                f"Gemini stayed overloaded through all {MAX_RETRIES} attempts."
+            ) from last_error
         raise RuntimeError(f"Gemini API request failed after {MAX_RETRIES} attempts: {last_error}")
 
     raw_text = (response.text or "").strip()

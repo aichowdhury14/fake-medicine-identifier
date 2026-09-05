@@ -12,7 +12,7 @@ import quota
 from drug_db import get_db
 from indications import get_reference
 from verdict import build_verdict
-from vision import QuotaExceededError, extract_medicine_info
+from vision import QuotaExceededError, ServiceUnavailableError, extract_medicine_info
 
 app = FastAPI(title="Fake Medicine Identifier (Bangladesh)")
 
@@ -45,6 +45,12 @@ QUOTA_REAL_EXHAUSTED_MSG = {
     "bn": "এই টুলটি আজকের জন্য Google-এর প্রকৃত দৈনিক সীমায় পৌঁছে গেছে, যা এই পাতার "
           "কাউন্টারে এখনও যাচাই বাকি দেখালেও ঘটতে পারে। অনুগ্রহ করে সীমা পুনরায় চালু হওয়ার "
           "পর আবার চেষ্টা করুন (বাংলাদেশ সময় প্রায় সকাল ৬টা)।",
+}
+SERVICE_BUSY_MSG = {
+    "en": "The AI service is briefly overloaded with requests right now. This "
+          "usually clears up within a minute or two — please try again shortly.",
+    "bn": "AI সেবাটি এই মুহূর্তে সাময়িকভাবে অতিরিক্ত ব্যস্ত। এটি সাধারণত এক-দুই মিনিটের "
+          "মধ্যে ঠিক হয়ে যায় — অনুগ্রহ করে একটু পরে আবার চেষ্টা করুন।",
 }
 
 
@@ -90,6 +96,8 @@ async def check_medicine(photo: UploadFile = File(...), lang: str = Query("en"))
         # availability until the shared daily quota actually resets.
         quota.mark_exhausted()
         raise HTTPException(429, _quota_message(QUOTA_REAL_EXHAUSTED_MSG, lang))
+    except ServiceUnavailableError:
+        raise HTTPException(503, _quota_message(SERVICE_BUSY_MSG, lang))
     except RuntimeError as exc:
         raise HTTPException(502, f"Could not analyze image: {exc}")
 
